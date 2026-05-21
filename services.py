@@ -69,13 +69,20 @@ def fetch_bets(session: Session, game: int) -> list[Bet]:
 
 def fetch_bets_for_user(session: Session, user_id: int) -> list[Bet]:
     from sqlalchemy import or_
-    return list(session.exec(
-        select(Bet).where(or_(Bet.challenger == user_id, Bet.challengee == user_id))
-    ).all())
+
+    return list(
+        session.exec(
+            select(Bet).where(or_(Bet.challenger == user_id, Bet.challengee == user_id))
+        ).all()
+    )
 
 
 def fetch_bet(session: Session, bet_id: int) -> Bet:
     return session.exec(select(Bet).where(Bet.id == bet_id)).first()  # type: ignore
+
+
+def fetch_pending_bets(session: Session):
+    return session.exec(select(Bet).where(Bet.status == BetStatus.PENDING)).all()  # type: ignore
 
 
 def fetch_predictions(
@@ -188,7 +195,11 @@ def record_transaction(
             case _:
                 desc = str(kind)
 
-    session.add(Transaction(payer=payer_id, payee=payee_id, bet_id=bet_id, amount=amount, desc=desc))
+    session.add(
+        Transaction(
+            payer=payer_id, payee=payee_id, bet_id=bet_id, amount=amount, desc=desc
+        )
+    )
     session.commit()
 
 
@@ -226,7 +237,11 @@ def accept_bet(session: Session, bet_id: int, challengee: int):
     bet = fetch_bet(session, bet_id)
     game = session.get(Game, bet.game_id)
     if game and game.start_time:
-        start_utc = game.start_time if game.start_time.tzinfo else game.start_time.replace(tzinfo=timezone.utc)
+        start_utc = (
+            game.start_time
+            if game.start_time.tzinfo
+            else game.start_time.replace(tzinfo=timezone.utc)
+        )
         if datetime.now(timezone.utc) >= start_utc + timedelta(hours=1):
             raise ValueError("Betting window has closed for this game")
     challengee_user = fetch_user(session, challengee)
@@ -295,11 +310,15 @@ def settle_bets(session: Session) -> None:
 
 
 def signup_bonus(session: Session, payee_id: int, amount: int):
-    record_transaction(session, amount=amount, kind=TransactionKind.SIGNUP_BONUS, payee_id=payee_id)
+    record_transaction(
+        session, amount=amount, kind=TransactionKind.SIGNUP_BONUS, payee_id=payee_id
+    )
 
 
 def bracket_bonus(session: Session, payee_id: int, amount: int):
-    record_transaction(session, amount=amount, kind=TransactionKind.BRACKET_BONUS, payee_id=payee_id)
+    record_transaction(
+        session, amount=amount, kind=TransactionKind.BRACKET_BONUS, payee_id=payee_id
+    )
 
 
 # --- Computation functions ---
@@ -427,7 +446,9 @@ def build_leaderboard(
         {
             "user": user_map[user_id],
             "score": score_bracket(preds, series_results, scoring),
-            "max_possible": compute_max_possible(preds, all_series, series_results, scoring),
+            "max_possible": compute_max_possible(
+                preds, all_series, series_results, scoring
+            ),
         }
         for user_id, preds in preds_by_user.items()
         if user_id in user_map
@@ -436,31 +457,48 @@ def build_leaderboard(
 
 
 def count_pending_challenges(session: Session, user_id: int) -> int:
-    return len(list(session.exec(
-        select(Bet).where(Bet.challengee == user_id, Bet.status == BetStatus.PENDING)
-    ).all()))
+    return len(
+        list(
+            session.exec(
+                select(Bet).where(
+                    Bet.challengee == user_id, Bet.status == BetStatus.PENDING
+                )
+            ).all()
+        )
+    )
 
 
 def fetch_pending_challenges(session: Session, user_id: int) -> list[Bet]:
-    return list(session.exec(
-        select(Bet).where(Bet.challengee == user_id, Bet.status == BetStatus.PENDING)
-    ).all())
+    return list(
+        session.exec(
+            select(Bet).where(
+                Bet.challengee == user_id, Bet.status == BetStatus.PENDING
+            )
+        ).all()
+    )
 
 
 def fetch_pending_issued(session: Session, user_id: int) -> list[Bet]:
-    return list(session.exec(
-        select(Bet).where(Bet.challenger == user_id, Bet.status == BetStatus.PENDING)
-    ).all())
+    return list(
+        session.exec(
+            select(Bet).where(
+                Bet.challenger == user_id, Bet.status == BetStatus.PENDING
+            )
+        ).all()
+    )
 
 
 def fetch_active_bets(session: Session, user_id: int) -> list[Bet]:
     from sqlalchemy import or_
-    return list(session.exec(
-        select(Bet).where(
-            or_(Bet.challenger == user_id, Bet.challengee == user_id),
-            Bet.status == BetStatus.ACCEPTED,
-        )
-    ).all())
+
+    return list(
+        session.exec(
+            select(Bet).where(
+                or_(Bet.challenger == user_id, Bet.challengee == user_id),
+                Bet.status == BetStatus.ACCEPTED,
+            )
+        ).all()
+    )
 
 
 def fetch_todays_games(session: Session) -> tuple[list[Game], set[int]]:
@@ -468,8 +506,15 @@ def fetch_todays_games(session: Session) -> tuple[list[Game], set[int]]:
     today_et = now_utc.astimezone(ET).date()
     games = fetch_games(session, today_et)
     bettable_ids = {
-        g.id for g in games
-        if now_utc < (g.start_time if g.start_time.tzinfo else g.start_time.replace(tzinfo=timezone.utc)) + timedelta(hours=1)
+        g.id
+        for g in games
+        if now_utc
+        < (
+            g.start_time
+            if g.start_time.tzinfo
+            else g.start_time.replace(tzinfo=timezone.utc)
+        )
+        + timedelta(hours=1)
     }
     return games, bettable_ids
 
@@ -490,7 +535,9 @@ def toggle_picks_open(session: Session) -> None:
         session.commit()
 
 
-def get_or_create_user(session: Session, email: str, name: str, bonus_amount: int) -> tuple[User, bool]:
+def get_or_create_user(
+    session: Session, email: str, name: str, bonus_amount: int
+) -> tuple[User, bool]:
     user = session.exec(select(User).where(User.email == email)).first()
     if not user:
         user = User(name=name, email=email)
@@ -510,8 +557,16 @@ def build_series_picker(all_series: list[Series], team_map: dict) -> dict:
         series_data[s.series_letter] = {
             "id": s.id,
             "letter": s.series_letter,
-            "top": {"id": top.id, "abbrev": top.abbrev, "logo": top.dark_logo_url} if top else None,
-            "bottom": {"id": bottom.id, "abbrev": bottom.abbrev, "logo": bottom.dark_logo_url} if bottom else None,
+            "top": {"id": top.id, "abbrev": top.abbrev, "logo": top.dark_logo_url}
+            if top
+            else None,
+            "bottom": {
+                "id": bottom.id,
+                "abbrev": bottom.abbrev,
+                "logo": bottom.dark_logo_url,
+            }
+            if bottom
+            else None,
         }
     return series_data
 
@@ -542,14 +597,74 @@ def build_bracket_rounds(
             "predicted_winner": team_map.get(pred_map.get(s.id)),
             "actual_winner": team_map.get(s.winner) if s.winner else None,
             "status": (
-                "correct" if s.winner and s.winner == pred_map.get(s.id)
-                else "wrong" if s.winner and s.winner != pred_map.get(s.id)
+                "correct"
+                if s.winner and s.winner == pred_map.get(s.id)
+                else "wrong"
+                if s.winner and s.winner != pred_map.get(s.id)
                 else "pending"
             ),
             "points": scoring.get(s.series_abbrev, 0),
         }
         rounds.setdefault(ROUND_LABELS[s.playoff_round], []).append(entry)
     return rounds
+
+
+def build_pending_bets_summary(session: Session) -> list[dict]:
+    bets = session.exec(
+        select(Bet).where(Bet.status == BetStatus.PENDING)
+    ).all()
+    result = []
+    for bet in bets:
+        game = session.get(Game, bet.game_id)
+        challenger = session.get(User, bet.challenger)
+        challengee = session.get(User, bet.challengee)
+        challenger_team = session.get(Team, bet.challenger_winner) if bet.challenger_winner else None
+        home_team = session.get(Team, game.home_team) if game else None
+        away_team = session.get(Team, game.away_team) if game else None
+        if game and challenger_team:
+            other_id = game.away_team if bet.challenger_winner == game.home_team else game.home_team
+            challengee_team = session.get(Team, other_id)
+        else:
+            challengee_team = None
+        start_et = None
+        if game and game.start_time:
+            start_utc = game.start_time if game.start_time.tzinfo else game.start_time.replace(tzinfo=timezone.utc)
+            start_et = start_utc.astimezone(ET).strftime("%-I:%M %p ET")
+        result.append({
+            "bet_id": bet.id,
+            "challenger": challenger.name if challenger else str(bet.challenger),
+            "challengee": challengee.name if challengee else str(bet.challengee),
+            "amount": bet.amount,
+            "game": f"{away_team.abbrev if away_team else '?'} @ {home_team.abbrev if home_team else '?'}",
+            "challenger_pick": challenger_team.abbrev if challenger_team else "?",
+            "challengee_pick": challengee_team.abbrev if challengee_team else "?",
+            "start_time": start_et,
+        })
+    return result
+
+
+def build_todays_games_summary(session: Session) -> list[dict]:
+    now_utc = datetime.now(timezone.utc)
+    today_et = now_utc.astimezone(ET).date()
+    games = fetch_games(session, today_et)
+    result = []
+    for game in games:
+        home = session.get(Team, game.home_team)
+        away = session.get(Team, game.away_team)
+        start_et = None
+        if game.start_time:
+            start_utc = game.start_time if game.start_time.tzinfo else game.start_time.replace(tzinfo=timezone.utc)
+            start_et = start_utc.astimezone(ET).strftime("%-I:%M %p ET")
+        result.append({
+            "game_id": game.id,
+            "away": away.name if away else "?",
+            "home": home.name if home else "?",
+            "away_abbrev": away.abbrev if away else "?",
+            "home_abbrev": home.abbrev if home else "?",
+            "start_time": start_et,
+            "status": game.status,
+        })
+    return result
 
 
 def build_compare_rounds(

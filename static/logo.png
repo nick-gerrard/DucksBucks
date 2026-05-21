@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <!-- Mallard head: violet iridescent sheen → deep bottle green -->
+    <linearGradient id="head" x1="5" y1="5" x2="90" y2="95" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#6D28D9"/>
+      <stop offset="45%"  stop-color="#166534"/>
+      <stop offset="100%" stop-color="#052E16"/>
+    </linearGradient>
+    <!-- Mallard bill: olive-yellow -->
+    <linearGradient id="bill" x1="65" y1="38" x2="99" y2="65" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#D4CF52"/>
+      <stop offset="100%" stop-color="#7C9420"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Hockey sticks — drawn first so they sit behind the head -->
+  <!-- Left stick: shaft + blade -->
+  <line x1="2"  y1="4"  x2="50" y2="96" stroke="#64748b" stroke-width="5" stroke-linecap="round"/>
+  <line x1="50" y1="96" x2="64" y2="92" stroke="#64748b" stroke-width="5" stroke-linecap="round"/>
+  <!-- Right stick: shaft + blade -->
+  <line x1="74" y1="4"  x2="26" y2="96" stroke="#64748b" stroke-width="5" stroke-linecap="round"/>
+  <line x1="26" y1="96" x2="12" y2="92" stroke="#64748b" stroke-width="5" stroke-linecap="round"/>
+
+  <!-- Head -->
+  <circle cx="38" cy="50" r="32" fill="url(#head)"/>
+
+  <!-- Iridescent teal shimmer — mallards have this in direct light -->
+  <ellipse cx="30" cy="37" rx="14" ry="8"
+           fill="#2DD4BF" fill-opacity="0.16"
+           transform="rotate(-20 30 37)"/>
+
+  <!-- Specular highlight -->
+  <ellipse cx="24" cy="33" rx="10" ry="6"
+           fill="white" fill-opacity="0.08"
+           transform="rotate(-30 24 33)"/>
+
+  <!-- Upper mandible: long, flat-topped, smooth rounded spatula tip (cubic bezier) -->
+  <path d="M 65 42
+           L 84 39
+           C 98 38 99 43 99 49
+           C 99 55 97 59 84 59
+           L 65 53
+           Z"
+        fill="url(#bill)"/>
+
+  <!-- Lower mandible: slight downward hook at tip -->
+  <path d="M 65 54
+           L 83 58
+           C 95 62 95 68 90 72
+           L 65 63
+           Z"
+        fill="url(#bill)" fill-opacity="0.82"/>
+
+  <!-- Dividing line between mandibles (slight slope matches bill angle) -->
+  <line x1="65" y1="53.5" x2="98" y2="50.5"
+        stroke="#3D5010" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+
+  <!-- Nostril -->
+  <ellipse cx="80" cy="45" rx="4" ry="2.5"
+           fill="#3D5010" fill-opacity="0.3"/>
+
+  <!-- Eye -->
+  <circle cx="45" cy="42" r="6"   fill="#0A0A1A" fill-opacity="0.9"/>
+  <circle cx="47" cy="40.5" r="2" fill="white"   fill-opacity="0.78"/>
+</svg>

@@ -44,6 +44,9 @@ from services import (
     fetch_pending_challenges,
     fetch_pending_issued,
     fetch_active_bets,
+    fetch_pending_bets,
+    build_pending_bets_summary,
+    build_todays_games_summary,
     count_pending_challenges,
     issue_bet,
     accept_bet,
@@ -60,7 +63,6 @@ from authlib.integrations.starlette_client import OAuth
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.responses import RedirectResponse
 from models import (
-    Bet,
     Team,
     TeamStats,
     Series,
@@ -79,8 +81,10 @@ engine = create_engine("sqlite:///bracket.db")
 templates = Jinja2Templates(directory="templates")
 
 templates.env.filters["et"] = lambda dt: (
-    dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
-).astimezone(ET).strftime("%-I:%M %p ET")
+    (dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt)
+    .astimezone(ET)
+    .strftime("%-I:%M %p ET")
+)
 
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "")
 
@@ -212,7 +216,6 @@ def resolve_season(session: Session, year: int | None) -> Season:
     return season
 
 
-
 @app.get("/login")
 async def login_page(request: Request, user: User | None = Depends(get_current_user)):
     if user:
@@ -231,7 +234,12 @@ async def auth_callback(request: Request):
     token = await oauth.google.authorize_access_token(request)
     info = token["userinfo"]
     with Session(engine) as session:
-        user, _ = get_or_create_user(session, email=info["email"], name=info["name"], bonus_amount=signup_bonus_val)
+        user, _ = get_or_create_user(
+            session,
+            email=info["email"],
+            name=info["name"],
+            bonus_amount=signup_bonus_val,
+        )
         request.session["user_id"] = user.id
     return RedirectResponse("/bracket")
 
@@ -294,15 +302,19 @@ async def bracket(
         predictions = fetch_predictions(session, user.id, season.id)
         if not predictions and not year:
             return RedirectResponse("/predict")
-        all_series = list(session.exec(
-            select(Series).where(Series.season_id == season.id)
-        ).all())
+        all_series = list(
+            session.exec(select(Series).where(Series.season_id == season.id)).all()
+        )
         team_map = {t.id: t for t in session.exec(select(Team)).all()}
         series_results = fetch_series_results(session, season.id)
         scoring = fetch_scoring(session, season.year)
         total_score = score_bracket(predictions, series_results, scoring)
-        max_possible = compute_max_possible(predictions, all_series, series_results, scoring)
-        rounds = build_bracket_rounds(predictions, all_series, series_results, team_map, scoring)
+        max_possible = compute_max_possible(
+            predictions, all_series, series_results, scoring
+        )
+        rounds = build_bracket_rounds(
+            predictions, all_series, series_results, team_map, scoring
+        )
 
     return templates.TemplateResponse(
         request=request,
@@ -348,9 +360,9 @@ async def predict(request: Request, user: User | None = Depends(get_current_user
             return RedirectResponse("/")
         if has_prediction(session, user.id, season.id):
             return RedirectResponse("/bracket")
-        all_series = list(session.exec(
-            select(Series).where(Series.season_id == season.id)
-        ).all())
+        all_series = list(
+            session.exec(select(Series).where(Series.season_id == season.id)).all()
+        )
         team_map = {t.id: t for t in session.exec(select(Team)).all()}
         series_data = build_series_picker(all_series, team_map)
 
@@ -377,7 +389,9 @@ async def submit_predictions(
         if not season:
             raise HTTPException(status_code=404, detail="No active season")
         if not season.picks_open:
-            raise HTTPException(status_code=403, detail="Bracket submissions are closed")
+            raise HTTPException(
+                status_code=403, detail="Bracket submissions are closed"
+            )
         if has_prediction(session, user.id, season.id):
             return RedirectResponse("/bracket", status_code=303)
         save_prediction(session, user.id, [p.model_dump() for p in predictions])
@@ -399,8 +413,12 @@ async def leaderboard(
         all_predictions = fetch_predictions_for_season(session, season.id)
         series_results = fetch_series_results(session, season.id)
         scoring = fetch_scoring(session, season.year)
-        all_series = list(session.exec(select(Series).where(Series.season_id == season.id)).all())
-        board = build_leaderboard(users, all_predictions, series_results, scoring, all_series)
+        all_series = list(
+            session.exec(select(Series).where(Series.season_id == season.id)).all()
+        )
+        board = build_leaderboard(
+            users, all_predictions, series_results, scoring, all_series
+        )
     return templates.TemplateResponse(
         request=request,
         name="leaderboard.html",
@@ -420,7 +438,9 @@ async def compare(
         return RedirectResponse("/login")
     with Session(engine) as session:
         season = resolve_season(session, year)
-        all_series = list(session.exec(select(Series).where(Series.season_id == season.id)).all())
+        all_series = list(
+            session.exec(select(Series).where(Series.season_id == season.id)).all()
+        )
         team_map = {t.id: t for t in session.exec(select(Team)).all()}
         all_predictions = fetch_predictions_for_season(session, season.id)
         pred_user_ids = {p.user_id for p in all_predictions}
@@ -435,7 +455,9 @@ async def compare(
                 preds_a = get_predictions_map(session, a, season.id)
                 preds_b = get_predictions_map(session, b, season.id)
                 scoring = fetch_scoring(session, season.year)
-                rounds = build_compare_rounds(all_series, preds_a, preds_b, team_map, scoring)
+                rounds = build_compare_rounds(
+                    all_series, preds_a, preds_b, team_map, scoring
+                )
 
     return templates.TemplateResponse(
         request=request,
@@ -537,6 +559,18 @@ async def post_decline(
     return RedirectResponse("/bets", status_code=303)
 
 
+@app.get("/api/pending-bets")
+async def get_pending_bet_info():
+    with Session(engine) as session:
+        return {"bets": build_pending_bets_summary(session)}
+
+
+@app.get("/api/todays-games")
+async def get_todays_games():
+    with Session(engine) as session:
+        return {"games": build_todays_games_summary(session)}
+
+
 @app.get("/admin")
 async def admin_dashboard(request: Request, admin: User = Depends(require_admin)):
     with Session(engine) as session:
@@ -546,8 +580,12 @@ async def admin_dashboard(request: Request, admin: User = Depends(require_admin)
     return templates.TemplateResponse(
         request=request,
         name="admin.html",
-        context={"user": admin, "users": users, "transactions": recent_transactions,
-                 "season": season},
+        context={
+            "user": admin,
+            "users": users,
+            "transactions": recent_transactions,
+            "season": season,
+        },
     )
 
 
@@ -559,7 +597,13 @@ async def admin_credit(
     desc: str = Form(...),
 ):
     with Session(engine) as session:
-        record_transaction(session, amount=amount, kind=TransactionKind.ADMIN_CREDIT, payee_id=user_id, note=desc)
+        record_transaction(
+            session,
+            amount=amount,
+            kind=TransactionKind.ADMIN_CREDIT,
+            payee_id=user_id,
+            note=desc,
+        )
     return RedirectResponse("/admin", status_code=303)
 
 
@@ -606,8 +650,6 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         context={"user": user, "code": exc.status_code, "message": exc.detail},
         status_code=exc.status_code,
     )
-
-
 
 
 @app.get("/about")
