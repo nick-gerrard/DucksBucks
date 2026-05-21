@@ -66,10 +66,12 @@ def team_away(session):
 
 @pytest.fixture
 def future_game(session, team_home, team_away):
-    start = datetime.now(timezone.utc) + timedelta(hours=2)
+    now_utc = datetime.now(timezone.utc)
+    today_et = now_utc.astimezone(timezone(timedelta(hours=-4))).date()
+    start = now_utc + timedelta(hours=2)
     g = Game(
         api_id=100,
-        date=datetime.now(timezone.utc).date(),
+        date=today_et,
         start_time=start.replace(tzinfo=None),
         home_team=team_home.id,
         away_team=team_away.id,
@@ -83,8 +85,8 @@ def future_game(session, team_home, team_away):
 
 @pytest.fixture
 def past_game(session, team_home, team_away):
-    start = datetime.now(timezone.utc) - timedelta(hours=2)
-    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).date()
+    yesterday = date.today() - timedelta(days=1)
+    start = datetime.combine(yesterday, datetime.min.time()) + timedelta(hours=20)
     g = Game(
         api_id=101,
         date=yesterday,
