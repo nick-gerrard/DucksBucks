@@ -61,6 +61,7 @@ import os
 from dotenv import load_dotenv
 from authlib.integrations.starlette_client import OAuth
 from starlette.middleware.sessions import SessionMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import RedirectResponse
 from models import (
     Team,
@@ -148,6 +149,26 @@ app = FastAPI(lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.add_middleware(SessionMiddleware, secret_key=os.environ["SESSION_SECRET_KEY"])
+
+
+class CrossOriginIsolationMiddleware(BaseHTTPMiddleware):
+    """Add COOP/COEP headers for /hammysammich routes only.
+
+    SharedArrayBuffer (required by love.js pthreads) is gated behind
+    cross-origin isolation. Scoping these headers to /hammysammich avoids
+    breaking Google Fonts or other cross-origin resources on the rest of the site.
+    """
+
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        path = request.url.path
+        if path == "/hammysammich" or path.startswith("/static/hammysammich"):
+            response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+            response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+        return response
+
+
+app.add_middleware(CrossOriginIsolationMiddleware)
 secret_key = os.environ["SESSION_SECRET_KEY"]
 
 # Bonus values from env
@@ -214,6 +235,42 @@ def resolve_season(session: Session, year: int | None) -> Season:
     if not season:
         raise HTTPException(status_code=404, detail="Season not found")
     return season
+
+
+class HammyScoreSubmit(BaseModel):
+    score: int
+
+
+@app.get("/hammysammich")
+async def hammysammich_page(
+    request: Request,
+    user: User | None = Depends(get_current_user),
+):
+    return templates.TemplateResponse(
+        request=request,
+        name="hammysammich.html",
+        context={"user": user},
+    )
+
+
+@app.post("/hammysammich/score")
+async def hammysammich_score(
+    data: HammyScoreSubmit,
+    user: User | None = Depends(get_current_user),
+):
+    if not user:
+        raise HTTPException(status_code=401, detail="Login to earn ducksbucks")
+    amount = max(data.score * 10, 0)
+    if amount == 0:
+        return {"ducksbucks_earned": 0}
+    with Session(engine) as session:
+        record_transaction(
+            session,
+            amount=amount,
+            kind=TransactionKind.HAMMY_SAMMICH,
+            payee_id=user.id,
+        )
+    return {"ducksbucks_earned": amount}
 
 
 @app.get("/login")

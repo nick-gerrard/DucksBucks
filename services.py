@@ -192,6 +192,8 @@ def record_transaction(
                 desc = f"Admin credited {payee.name} {amount} DB"
             case TransactionKind.BRACKET_BONUS:
                 desc = f"{payee.name} awarded bracket prize: {amount} DB"
+            case TransactionKind.HAMMY_SAMMICH:
+                desc = f"{payee.name} earned {amount} DB playing Hammy's House"
             case _:
                 desc = str(kind)
 

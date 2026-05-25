@@ -33,3 +33,4 @@ class TransactionKind(StrEnum):
     BET_REFUND = "bet_refund"
     ADMIN_CREDIT = "admin_credit"
     BRACKET_BONUS = "bracket_bonus"
+    HAMMY_SAMMICH = "hammy_sammich"
