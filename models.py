@@ -105,3 +105,11 @@ class Transaction(SQLModel, table=True):
     )
     amount: int
     desc: str | None = Field(nullable=True)
+
+class HammySammichScore(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int | None = Field(default=None, foreign_key="user.id")
+    score: int
+    transaction_date: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )

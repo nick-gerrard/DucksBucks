@@ -54,6 +54,9 @@ from services import (
     record_transaction,
     toggle_picks_open,
     get_or_create_user,
+    fetch_hammysammich_scores,
+    fetch_top_hammysammich_scores,
+    record_hammysammich_score,
 )
 from pydantic import BaseModel
 
@@ -246,10 +249,12 @@ async def hammysammich_page(
     request: Request,
     user: User | None = Depends(get_current_user),
 ):
+    with Session(engine) as session:
+        top_scores = fetch_top_hammysammich_scores(session)
     return templates.TemplateResponse(
         request=request,
         name="hammysammich.html",
-        context={"user": user},
+        context={"user": user, "top_scores": top_scores},
     )
 
 
@@ -270,7 +275,9 @@ async def hammysammich_score(
             kind=TransactionKind.HAMMY_SAMMICH,
             payee_id=user.id,
         )
+        record_hammysammich_score(session, user_id=user.id, score = data.score)
     return {"ducksbucks_earned": amount}
+
 
 
 @app.get("/login")

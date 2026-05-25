@@ -3,6 +3,13 @@
 {% block title %}Hammy's House{% endblock %}
 
 {% block content %}
+
+{% set db_icon %}
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4 inline-block flex-shrink-0">
+    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
+</svg>
+{% endset %}
+
 <div
     x-data="{ toast: null }"
     @hammy-score.window="toast = $event.detail; setTimeout(() => toast = null, 4000)"
@@ -20,18 +27,26 @@
         x-transition:leave-start="opacity-100 translate-y-0"
         x-transition:leave-end="opacity-0 translate-y-2"
         class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-800 border border-yellow-400/30 shadow-xl text-yellow-400 font-semibold text-sm"
-        x-text="toast"
-    ></div>
+    >
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4 flex-shrink-0">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
+        </svg>
+        <span x-text="toast"></span>
+    </div>
 
     <!-- Header -->
     <div class="text-center">
         <h1 class="text-3xl font-bold bg-gradient-to-r from-violet-400 to-teal-400 bg-clip-text text-transparent">
             Hammy's House
         </h1>
-        <p class="text-slate-400 text-sm mt-1">
-            Help Hamilton eat snacks and dodge the vacuum. Earn 1 🦆 per sandwich.
+        <p class="text-slate-400 text-sm mt-1 flex items-center justify-center gap-1">
+            Help Hamilton eat snacks and dodge the vacuum. Earn 10 DB
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-3.5 inline-block">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
+            </svg>
+            per sandwich.
             {% if not user %}
-            <a href="/login" class="text-blue-400 hover:underline">Log in</a> to earn DucksBucks.
+            <a href="/login" class="text-blue-400 hover:underline ml-1">Log in</a> to earn DucksBucks.
             {% endif %}
         </p>
     </div>
@@ -39,12 +54,8 @@
     <!-- Game canvas area -->
     <div class="relative rounded-xl overflow-hidden border border-white/10 shadow-2xl bg-black"
          style="width: 800px; max-width: 100%;">
-
-        <!-- Loading canvas (shown while assets download) -->
         <canvas id="loadingCanvas" width="800" height="600"
                 style="display: block; max-width: 100%; height: auto;"></canvas>
-
-        <!-- Game canvas (hidden until loaded) -->
         <canvas id="canvas" oncontextmenu="event.preventDefault()"
                 style="display: block; visibility: hidden; max-width: 100%; height: auto;"></canvas>
     </div>
@@ -57,18 +68,48 @@
         <span>F — fullscreen</span>
     </div>
 
+    <!-- Top scores -->
+    <div class="w-full max-w-sm">
+        <div class="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+            <div class="flex items-center gap-2 px-4 py-3 border-b border-white/10">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4 text-yellow-400">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0v-3.375c0-.621-.503-1.125-1.125-1.125h-.871M7.5 18.75v-3.375c0-.621.504-1.125 1.125-1.125h.872m5.007 0H9.497m5.007 0a7.454 7.454 0 0 1-.982-3.172M9.497 14.25a7.454 7.454 0 0 0 .981-3.172M5.25 4.236c-.982.143-1.954.317-2.916.52A6.003 6.003 0 0 0 7.73 9.728M5.25 4.236V4.5c0 2.108.966 3.99 2.48 5.228M5.25 4.236V2.721C7.456 2.41 9.71 2.25 12 2.25c2.291 0 4.545.16 6.75.47v1.516M7.73 9.728a6.726 6.726 0 0 0 2.748 1.35m8.272-6.842V4.5c0 2.108-.966 3.99-2.48 5.228m2.48-5.492a46.32 46.32 0 0 1 2.916.52 6.003 6.003 0 0 1-5.395 4.972m0 0a6.726 6.726 0 0 1-2.749 1.35m0 0a6.772 6.772 0 0 1-3.044 0" />
+                </svg>
+                <span class="text-sm font-semibold text-white">High Scores</span>
+            </div>
+            {% if top_scores %}
+            {% for entry in top_scores %}
+            <div class="flex items-center justify-between px-4 py-3 {% if not loop.last %}border-b border-white/5{% endif %}">
+                <div class="flex items-center gap-3">
+                    <span class="text-xs font-bold w-4 text-center {% if loop.index == 1 %}text-yellow-400{% elif loop.index == 2 %}text-slate-300{% else %}text-amber-600{% endif %}">
+                        {{ loop.index }}
+                    </span>
+                    <span class="text-sm text-slate-200">{{ entry.name }}</span>
+                </div>
+                <div class="flex items-center gap-1.5 text-yellow-400 font-semibold text-sm">
+                    {{ entry.score }}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-3.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm3 0h.008v.008H18V10.5Zm-12 0h.008v.008H6V10.5Z" />
+                    </svg>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="px-4 py-5 text-center text-slate-500 text-sm">No scores yet — be the first.</div>
+            {% endif %}
+        </div>
+    </div>
+
 </div>
 
-<!-- love.js bootstrap (mirrors the generated index.html, adapted for our page) -->
+<!-- love.js bootstrap -->
 <script type="text/javascript">
-  // Intercept keyboard scroll so arrows don't scroll the page while playing
   window.addEventListener("keydown", function(e) {
     if ([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
       e.preventDefault();
     }
   }, false);
 
-  // Loading canvas renderer
   var loadingContext = document.getElementById('loadingCanvas').getContext('2d');
   function drawLoadingText(text) {
     var canvas = loadingContext.canvas;
@@ -84,7 +125,6 @@
     arguments: ["./game.love"],
     INITIAL_MEMORY: 67108864,
     print: function(text) {
-      // Intercept Love2D print() calls — our score signal comes through here
       if (text && text.startsWith('HAMMY_SCORE:')) {
         var score = parseInt(text.substring(12), 10);
         if (!isNaN(score)) { window.hammySubmitScore(score); }
@@ -127,7 +167,6 @@
     Module.setStatus('Error — see console');
   };
 
-  // Score submission bridge — called by Lua via love.js js interop
   window.hammySubmitScore = async function(score) {
     {% if user %}
     try {
@@ -139,21 +178,18 @@
       const data = await resp.json();
       if (data.ducksbucks_earned > 0) {
         window.dispatchEvent(new CustomEvent('hammy-score', {
-          detail: '🦆 +' + data.ducksbucks_earned + ' DucksBucks earned!'
+          detail: '+' + data.ducksbucks_earned + ' DucksBucks earned!'
         }));
       }
     } catch (e) {
       console.warn('Score submission failed', e);
     }
     {% else %}
-    // Not logged in — just a no-op; the page already shows a login prompt
     console.log('Game over, score:', score, '(not logged in, no ducksbucks awarded)');
     {% endif %}
   };
 
-  var applicationLoad = function() {
-    Love(Module);
-  };
+  var applicationLoad = function() { Love(Module); };
 </script>
 <script type="text/javascript" src="/static/hammysammich/game.js"></script>
 <script async type="text/javascript" src="/static/hammysammich/love.js" onload="applicationLoad()"></script>

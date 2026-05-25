@@ -11,6 +11,7 @@ from models import (
     Season,
     Transaction,
     Bet,
+    HammySammichScore
 )
 import httpx
 
@@ -84,6 +85,19 @@ def fetch_bet(session: Session, bet_id: int) -> Bet:
 def fetch_pending_bets(session: Session):
     return session.exec(select(Bet).where(Bet.status == BetStatus.PENDING)).all()  # type: ignore
 
+def fetch_hammysammich_scores(session: Session):
+    return list(session.exec(select(HammySammichScore)).all())
+
+
+def fetch_top_hammysammich_scores(session: Session, limit: int = 3):
+    results = session.exec(
+        select(HammySammichScore, User)
+        .join(User, HammySammichScore.user_id == User.id)  # type: ignore
+        .order_by(HammySammichScore.score.desc())
+        .limit(limit)
+    ).all()
+    return [{"name": user.name, "score": score.score} for score, user in results]
+
 
 def fetch_predictions(
     session: Session, user_id: int, season_id: int
@@ -156,6 +170,14 @@ def save_prediction(session: Session, user_id: int, predictions: list[dict]) -> 
         )
     session.commit()
 
+def record_hammysammich_score(session: Session, user_id: int, score: int):
+    session.add(
+        HammySammichScore(
+            user_id = user_id,
+            score = score,
+        )
+    )
+    session.commit()
 
 def record_transaction(
     session: Session,
