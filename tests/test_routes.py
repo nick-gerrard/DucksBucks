@@ -51,6 +51,7 @@ def client(engine, monkeypatch):
          patch("main.seed_series"), \
          patch("main.seed_scoring_config"), \
          patch("main.seed_standings_data"), \
+         patch("main.seed_team_badges"), \
          patch("main.ingest_games"), \
          patch.object(main.scheduler, "start"), \
          patch.object(main.scheduler, "shutdown"):
