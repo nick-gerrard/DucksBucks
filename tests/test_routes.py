@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import SQLModel, Session, create_engine, select
 from sqlalchemy.pool import StaticPool
 from unittest.mock import patch, MagicMock
-from models import User, Season, Bet, Prediction
+from models import User, Season, Bet, Prediction, Badge
 from enums import BetStatus
 
 
