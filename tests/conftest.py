@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime, timedelta, timezone, date
 from sqlmodel import SQLModel, Session, create_engine
-from models import User, Season, Team, Series, Game, ScoringConfig, Bet, Prediction
+from models import User, Season, Team, Series, Game, ScoringConfig, Bet, Prediction, Badge
 from enums import BetStatus, GameStatus
 
 
