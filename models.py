@@ -65,6 +65,16 @@ class User(SQLModel, table=True):
     name: str
     email: str = Field(unique=True)
     balance: int = 0
+    badge: int | None = Field(foreign_key="badge.id")
+    favorite_team: int | None = Field(foreign_key="team.id")
+    badge_expiration: date | None = Field(default=None)
+
+
+class Badge(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    name: str
+    price: int
+    url: str
 
 
 class ScoringConfig(SQLModel, table=True):
@@ -90,9 +100,7 @@ class Bet(SQLModel, table=True):
     challenger_winner: int | None = Field(foreign_key="team.id")
     amount: int
     status: str = BetStatus.PENDING
-    bet_date: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    bet_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class Transaction(SQLModel, table=True):
@@ -105,6 +113,7 @@ class Transaction(SQLModel, table=True):
     )
     amount: int
     desc: str | None = Field(nullable=True)
+
 
 class HammySammichScore(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)

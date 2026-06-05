@@ -34,3 +34,4 @@ class TransactionKind(StrEnum):
     ADMIN_CREDIT = "admin_credit"
     BRACKET_BONUS = "bracket_bonus"
     HAMMY_SAMMICH = "hammy_sammich"
+    BADGE_PURCHASE = "badge_purchase"

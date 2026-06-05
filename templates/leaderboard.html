@@ -23,11 +23,17 @@
                 {% endif %}
             ">{{ loop.index }}</span>
 
-            <span class="flex-1 font-semibold">
+            <span class="flex-1 font-semibold flex items-center gap-2 min-w-0">
+                {% if badge_url_map[entry.user.id] %}
+                <div class="w-10 h-10 flex-shrink-0">
+                    <img src="{{ badge_url_map[entry.user.id] }}" class="w-full h-full object-contain" />
+                </div>
+                {% endif %}
                 {% if entry.user.id != current_user.id %}
-                <a href="/compare?a={{ current_user.id }}&b={{ entry.user.id }}" class="hover:text-blue-400 transition-colors">{{ entry.user.name }}</a>
+                <a href="/compare?a={{ current_user.id }}&b={{ entry.user.id }}" class="hover:text-blue-400 transition-colors truncate">{{ entry.user.name }}</a>
                 {% else %}
-                {{ entry.user.name }} <span class="text-xs text-blue-400 ml-1">(you)</span>
+                <span class="truncate">{{ entry.user.name }}</span>
+                <span class="text-xs text-blue-400 ml-1 flex-shrink-0">(you)</span>
                 {% endif %}
             </span>
 

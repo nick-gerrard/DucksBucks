@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+{% block content %}
+    <div class="max-w-2xl mx-auto space-y-8 animate-fade-in gap-4 flex flex-col">
+        <h1 class="text-2xl sm:text-3xl font-bold">My Profile</h1>
+        <!-- Avatar + identity card -->
+        <div class="bg-white/5 border border-white/10 rounded-xl p-6 flex flex-col items-center gap-5">
+            {% if badge_url %}
+                <div class="w-24 h-24 flex-shrink-0">
+                    <img src="{{ badge_url }}" class="w-full h-full object-contain" />
+                </div>
+            {% else %}
+                <div class="w-24 h-24 rounded-full bg-blue-600 flex items-center justify-center text-2xl font-bold flex-shrink-0 select-none">
+                    {{ user.name[0] | upper }}
+                </div>
+            {% endif %}
+            <div class="min-w-0">
+                <p class="text-xl font-bold truncate">{{ user.name }}</p>
+                {% if active_badge and user.badge_expiration %}
+                    <p class="text-sm text-violet-400 mt-0.5">{{ active_badge.name }} badge · expires {{ user.badge_expiration }}</p>
+                {% elif user.favorite_team %}
+                    <p class="text-sm text-slate-400 mt-0.5">Showing favorite team badge</p>
+                {% else %}
+                    <p class="text-sm text-slate-500 mt-0.5">No badge set</p>
+                {% endif %}
+                <p class="text-yellow-400 font-semibold mt-1">{{ user.balance }} DB</p>
+            </div>
+        </div>
+        <!-- Favorite team -->
+        <div class="bg-white/5 border border-white/10 rounded-xl p-6 m-8">
+            <h2 class="text-lg font-semibold mb-1">Favorite Team</h2>
+            <p class="text-sm text-slate-400 mb-4">
+                Your favorite team's logo is your default badge when no purchased badge is active.
+            </p>
+            <form method="POST" action="/me/favorite-team" class="flex gap-3">
+                <select name="team_id"
+                        class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-violet-400">
+                    <option value="">— pick a team —</option>
+                    {% for team in teams %}
+                        <option value="{{ team.id }}"
+                                {% if user.favorite_team == team.id %}selected{% endif %}>{{ team.name }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit"
+                        class="bg-violet-600 hover:bg-violet-500 text-white font-semibold px-5 py-2 rounded-xl transition-colors text-sm flex-shrink-0">
+                    Save
+                </button>
+            </form>
+        </div>
+        <!-- Recent transactions -->
+        {% if recent_txns %}
+            <div>
+                <h2 class="text-lg font-semibold mb-4">Recent Transactions</h2>
+                <div class="flex flex-col gap-2">
+                    {% for txn in recent_txns %}
+                        <div class="bg-white/5 border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between gap-3 text-sm">
+                            <span class="text-slate-300 min-w-0 truncate">{{ txn.desc }}</span>
+                            <span class="font-semibold flex-shrink-0 {% if txn.payee == user.id %}text-green-400{% else %}text-red-400{% endif %}">
+                                {% if txn.payee == user.id %}
+                                    +
+                                {% else %}
+                                    -
+                                {% endif %}
+                                {{ txn.amount }} DB
+                            </span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %}

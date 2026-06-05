@@ -1,0 +1,88 @@
+{% extends "base.html" %} {% block title %}Store{% endblock %} {% block content %}
+<form
+  method="POST"
+  action="/store/purchase"
+  x-data="{ badgeId: null, badgeName: '', badgePrice: 0, badgeUrl: '' }"
+>
+  <div class="max-w-5xl mx-auto animate-fade-in pb-28">
+    <h1 class="text-2xl sm:text-3xl font-bold mb-6">Store</h1>
+
+    {% if request.query_params.get('success') %}
+    <div class="bg-green-500/10 border border-green-500/30 text-green-400 rounded-xl px-4 py-3 text-sm mb-6">
+      Badge purchased successfully!
+    </div>
+    {% endif %}
+    {% if request.query_params.get('error') %}
+    <div class="bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl px-4 py-3 text-sm mb-6">
+      {{ request.query_params.get('error') }}
+    </div>
+    {% endif %}
+
+    {% if badges %}
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+      {% for badge in badges %}
+      <button
+        type="button"
+        @click="badgeId = {{ badge.id }}; badgeName = '{{ badge.name }}'; badgePrice = {{ badge.price }}; badgeUrl = '{{ badge.url }}'"
+        :class="badgeId === {{ badge.id }} ? 'border-violet-400 bg-violet-400/10 ring-1 ring-violet-400/40' : 'border-white/10 hover:border-white/30'"
+        class="border rounded-xl p-3 text-center transition-all cursor-pointer flex flex-col items-center gap-2"
+      >
+        <div class="w-14 h-14">
+          <img src="{{ badge.url }}" class="w-full h-full object-contain" />
+        </div>
+        <p class="text-xs font-medium leading-tight">{{ badge.name }}</p>
+        <p class="text-[11px] text-yellow-400">{{ badge.price }} DB</p>
+      </button>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white/5 border border-white/10 rounded-xl p-8 text-center text-gray-400">
+      No badges available yet. Check back soon!
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Sticky bottom bar -->
+  <div class="fixed bottom-0 inset-x-0 z-20 bg-slate-900/95 backdrop-blur-md border-t border-white/10">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
+
+      <!-- Selected badge preview -->
+      <div class="flex items-center gap-2.5 flex-shrink-0">
+        <div class="w-10 h-10 flex-shrink-0">
+          <img x-show="badgeId" :src="badgeUrl" class="w-full h-full object-contain" />
+          <div x-show="!badgeId" class="w-10 h-10 rounded-full bg-white/10 border border-white/10"></div>
+        </div>
+        <div class="hidden sm:block leading-tight">
+          <p class="text-xs text-slate-400" x-show="!badgeId">Select a badge</p>
+          <p class="text-sm font-semibold" x-show="badgeId" x-text="badgeName"></p>
+          <p class="text-xs text-yellow-400" x-show="badgeId" x-text="badgePrice + ' DB'"></p>
+        </div>
+      </div>
+
+      <div class="w-px h-8 bg-white/10 flex-shrink-0"></div>
+
+      <!-- Apply to -->
+      <select
+        name="target_user_id"
+        class="flex-1 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-400 min-w-0"
+      >
+        {% for u in users %}
+        <option value="{{ u.id }}" {% if u.id == user.id %}selected{% endif %}>
+          {{ u.name }}{% if u.id == user.id %} (you){% endif %}
+        </option>
+        {% endfor %}
+      </select>
+
+      <input type="hidden" name="badge_id" :value="badgeId" />
+
+      <button
+        type="submit"
+        :disabled="!badgeId"
+        class="flex-shrink-0 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold px-5 py-2 rounded-xl transition-colors text-sm"
+      >
+        Purchase
+      </button>
+    </div>
+  </div>
+</form>
+{% endblock %}

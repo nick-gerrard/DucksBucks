@@ -12,6 +12,7 @@ from seed import (
     seed_series,
     seed_scoring_config,
     seed_standings_data,
+    seed_team_badges,
     STANDINGS,
 )
 from contextlib import asynccontextmanager
@@ -33,6 +34,7 @@ from services import (
     ingest_games,
     fetch_predictions,
     fetch_all_users,
+    fetch_all_badges,
     fetch_predictions_for_season,
     fetch_series_results,
     fetch_scoring,
@@ -44,7 +46,7 @@ from services import (
     fetch_pending_challenges,
     fetch_pending_issued,
     fetch_active_bets,
-    fetch_pending_bets,
+    fetch_user_transactions,
     build_pending_bets_summary,
     build_todays_games_summary,
     count_pending_challenges,
@@ -54,9 +56,12 @@ from services import (
     record_transaction,
     toggle_picks_open,
     get_or_create_user,
-    fetch_hammysammich_scores,
     fetch_top_hammysammich_scores,
     record_hammysammich_score,
+    get_effective_badge_url,
+    compute_badge_url_map,
+    buy_badge,
+    set_favorite_team,
 )
 from pydantic import BaseModel
 
@@ -67,6 +72,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import RedirectResponse
 from models import (
+    Badge,
     Team,
     TeamStats,
     Series,
@@ -112,10 +118,19 @@ def picks_open() -> bool:
         return bool(season and season.picks_open)
 
 
+def user_badge_url(user_id: int) -> str | None:
+    with Session(engine) as session:
+        user = session.get(User, user_id)
+        if not user:
+            return None
+        return get_effective_badge_url(session, user)
+
+
 templates.env.globals["challenge_count"] = challenge_count
 templates.env.globals["user_has_submitted"] = user_has_submitted
 templates.env.globals["admin_email"] = ADMIN_EMAIL
 templates.env.globals["picks_open"] = picks_open
+templates.env.globals["user_badge_url"] = user_badge_url
 
 
 def create_db():
@@ -130,6 +145,7 @@ def run_daily_job():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_db()
+    seed_team_badges()
     with Session(engine) as session:
         if not session.exec(select(Series)).first():
             series_data = get_series_data(URL)
@@ -275,9 +291,8 @@ async def hammysammich_score(
             kind=TransactionKind.HAMMY_SAMMICH,
             payee_id=user.id,
         )
-        record_hammysammich_score(session, user_id=user.id, score = data.score)
+        record_hammysammich_score(session, user_id=user.id, score=data.score)
     return {"ducksbucks_earned": amount}
-
 
 
 @app.get("/login")
@@ -483,10 +498,11 @@ async def leaderboard(
         board = build_leaderboard(
             users, all_predictions, series_results, scoring, all_series
         )
+        badge_url_map = compute_badge_url_map(session, users)
     return templates.TemplateResponse(
         request=request,
         name="leaderboard.html",
-        context={"board": board, "current_user": user, "user": user, "season": season},
+        context={"board": board, "current_user": user, "user": user, "season": season, "badge_url_map": badge_url_map},
     )
 
 
@@ -688,10 +704,11 @@ async def vault(request: Request, user: User | None = Depends(get_current_user))
         return RedirectResponse("/login")
     with Session(engine) as session:
         users = fetch_users_by_balance(session)
+        badge_url_map = compute_badge_url_map(session, users)
     return templates.TemplateResponse(
         request=request,
         name="vault.html",
-        context={"user": user, "users": users},
+        context={"user": user, "users": users, "badge_url_map": badge_url_map},
     )
 
 
@@ -714,6 +731,76 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         context={"user": user, "code": exc.status_code, "message": exc.detail},
         status_code=exc.status_code,
     )
+
+
+@app.get("/store")
+async def store(request: Request, user: User | None = Depends(get_current_user)):
+    if not user:
+        return RedirectResponse("/login")
+    with Session(engine) as session:
+        badges = fetch_all_badges(session)
+        users = fetch_all_users(session)
+    return templates.TemplateResponse(
+        request=request,
+        name="store.html",
+        context={"user": user, "badges": badges, "users": users},
+    )
+
+
+@app.post("/store/purchase")
+async def purchase_badge(
+    request: Request,
+    user: User | None = Depends(get_current_user),
+    badge_id: int = Form(...),
+    target_user_id: int = Form(...),
+):
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    try:
+        with Session(engine) as session:
+            buy_badge(session, buyer_id=user.id, target_user_id=target_user_id, badge_id=badge_id)
+    except ValueError as e:
+        return RedirectResponse(f"/store?error={e}", status_code=303)
+    return RedirectResponse("/store?success=1", status_code=303)
+
+
+@app.get("/me")
+async def profile(request: Request, user: User | None = Depends(get_current_user)):
+    if not user:
+        return RedirectResponse("/login")
+    with Session(engine) as session:
+        teams = list(session.exec(select(Team).where(Team.name != "TBD")).all())
+        recent_txns = fetch_user_transactions(session, user.id)
+        badge_url = get_effective_badge_url(session, user)
+        active_badge = session.get(Badge, user.badge) if user.badge else None
+        refreshed_user = session.get(User, user.id)
+    return templates.TemplateResponse(
+        request=request,
+        name="me.html",
+        context={
+            "user": refreshed_user,
+            "teams": teams,
+            "recent_txns": recent_txns,
+            "badge_url": badge_url,
+            "active_badge": active_badge,
+        },
+    )
+
+
+@app.post("/me/favorite-team")
+async def update_favorite_team(
+    request: Request,
+    user: User | None = Depends(get_current_user),
+    team_id: int = Form(...),
+):
+    if not user:
+        return RedirectResponse("/login", status_code=303)
+    with Session(engine) as session:
+        team = session.get(Team, team_id)
+        if not team:
+            raise HTTPException(status_code=404, detail="Team not found")
+        set_favorite_team(session, user.id, team_id)
+    return RedirectResponse("/me", status_code=303)
 
 
 @app.get("/about")

@@ -18,9 +18,14 @@
                 {{ loop.index }}
             </span>
 
-            <span class="flex-1 font-semibold">
-                {{ u.name }}
-                {% if u.id == user.id %}<span class="text-xs text-yellow-400 ml-1">(you)</span>{% endif %}
+            <span class="flex-1 font-semibold flex items-center gap-2 min-w-0">
+                {% if badge_url_map[u.id] %}
+                <div class="w-10 h-10 flex-shrink-0">
+                    <img src="{{ badge_url_map[u.id] }}" class="w-full h-full object-contain" />
+                </div>
+                {% endif %}
+                <span class="truncate">{{ u.name }}</span>
+                {% if u.id == user.id %}<span class="text-xs text-yellow-400 ml-1 flex-shrink-0">(you)</span>{% endif %}
             </span>
 
             <div class="flex items-center gap-1.5 text-yellow-400 font-bold text-lg">

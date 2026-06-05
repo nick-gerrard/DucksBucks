@@ -2,6 +2,7 @@ from datetime import datetime, date, timedelta, timezone
 from sqlmodel import Session, select
 from enums import BetStatus, GameStatus, TransactionKind
 from models import (
+    Badge,
     Game,
     Prediction,
     Series,
@@ -11,7 +12,7 @@ from models import (
     Season,
     Transaction,
     Bet,
-    HammySammichScore
+    HammySammichScore,
 )
 import httpx
 
@@ -46,6 +47,26 @@ def fetch_current_season(session: Session) -> Season | None:
 
 def fetch_season_by_year(session: Session, year: int) -> Season | None:
     return session.exec(select(Season).where(Season.year == year)).first()
+
+
+def fetch_all_badges(session: Session) -> list[Badge]:
+    return list(session.exec(select(Badge)).all())
+
+
+def get_effective_badge_url(session: Session, user: User) -> str | None:
+    if user.badge and user.badge_expiration and user.badge_expiration >= date.today():
+        badge = session.get(Badge, user.badge)
+        if badge:
+            return badge.url
+    if user.favorite_team:
+        team = session.get(Team, user.favorite_team)
+        if team:
+            return team.logo_url
+    return None
+
+
+def compute_badge_url_map(session: Session, users: list[User]) -> dict[int, str | None]:
+    return {u.id: get_effective_badge_url(session, u) for u in users}
 
 
 def fetch_all_users(session: Session) -> list[User]:
@@ -216,6 +237,8 @@ def record_transaction(
                 desc = f"{payee.name} awarded bracket prize: {amount} DB"
             case TransactionKind.HAMMY_SAMMICH:
                 desc = f"{payee.name} earned {amount} DB playing Hammy's House"
+            case TransactionKind.BADGE_PURCHASE:
+                desc = f"{payer.name} purchased a badge"
             case _:
                 desc = str(kind)
 
@@ -545,6 +568,56 @@ def fetch_todays_games(session: Session) -> tuple[list[Game], set[int]]:
 
 def fetch_users_by_balance(session: Session) -> list[User]:
     return sorted(fetch_all_users(session), key=lambda u: u.balance, reverse=True)
+
+
+def fetch_user_transactions(session: Session, user_id: int, limit: int = 10) -> list[Transaction]:
+    from sqlalchemy import or_
+    return list(
+        session.exec(
+            select(Transaction)
+            .where(or_(Transaction.payer == user_id, Transaction.payee == user_id))
+            .order_by(Transaction.transaction_date.desc())
+            .limit(limit)
+        ).all()
+    )
+
+
+def buy_badge(session: Session, buyer_id: int, target_user_id: int, badge_id: int) -> None:
+    badge = session.get(Badge, badge_id)
+    if not badge:
+        raise ValueError("Badge not found")
+    buyer = session.get(User, buyer_id)
+    if not buyer or buyer.balance < badge.price:
+        raise ValueError("Insufficient balance")
+    target = session.get(User, target_user_id)
+    if not target:
+        raise ValueError("Target user not found")
+
+    target.badge = badge_id
+    target.badge_expiration = date.today() + timedelta(days=7)
+    session.add(target)
+
+    if buyer_id == target_user_id:
+        note = f"{buyer.name} bought '{badge.name}' badge"
+    else:
+        note = f"{buyer.name} gifted '{badge.name}' badge to {target.name}"
+
+    record_transaction(
+        session,
+        amount=badge.price,
+        kind=TransactionKind.BADGE_PURCHASE,
+        payer_id=buyer_id,
+        note=note,
+    )
+
+
+def set_favorite_team(session: Session, user_id: int, team_id: int) -> None:
+    user = session.get(User, user_id)
+    if not user:
+        raise ValueError("User not found")
+    user.favorite_team = team_id
+    session.add(user)
+    session.commit()
 
 
 def fetch_recent_transactions(session: Session, limit: int = 20) -> list[Transaction]:

@@ -1,7 +1,9 @@
 from sqlmodel import create_engine, Session, select, SQLModel
-from models import Team, Series, Season, TeamStats, User, ScoringConfig, Prediction
+from models import Badge, Team, Series, Season, TeamStats, User, ScoringConfig, Prediction
 from enums import SeriesRound
 import httpx
+import json
+import os
 from datetime import datetime
 
 
@@ -177,6 +179,22 @@ def seed_standings_data(standings):
         for team in result:
             session.add(team)
         session.commit()
+
+
+def seed_team_badges():
+    badges_file = os.path.join(os.path.dirname(__file__), "team_badges.json")
+    with open(badges_file) as f:
+        entries = json.load(f)
+    with Session(engine) as session:
+        existing_names = {b.name for b in session.exec(select(Badge)).all()}
+        new_badges = [
+            Badge(name=e["name"], url=e["url"], price=e["price"])
+            for e in entries
+            if e["name"] not in existing_names
+        ]
+        if new_badges:
+            session.add_all(new_badges)
+            session.commit()
 
 
 if __name__ == "__main__":
