@@ -6,11 +6,12 @@ from enums import BetStatus, GameStatus
 
 class Team(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    api_id: int = Field(unique=True)
+    api_id: int | None = Field(default=None, unique=True)
     name: str
-    abbrev: str
+    abbrev: str = Field(unique=True)
     logo_url: str
     dark_logo_url: str
+    is_playoff: bool = Field(default=False)
 
 
 class Season(SQLModel, table=True):

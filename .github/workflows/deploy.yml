@@ -47,7 +47,8 @@ jobs:
           ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} 'bash -e -l -c "
             cd ~/ducksbucks &&
             git pull &&
-            uv sync
+            uv sync &&
+            uv run alembic upgrade head
           "'
 
       - name: Sync built CSS

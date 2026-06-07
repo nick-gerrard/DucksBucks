@@ -55,6 +55,19 @@ def parse_team(team: dict) -> dict:
     }
 
 
+def parse_standings_team(standing: dict) -> dict:
+    abbrev = standing["teamAbbrev"]["default"]
+    logo = standing["teamLogo"]
+    return {
+        "api_id": None,
+        "name": standing["teamName"]["default"],
+        "abbrev": abbrev,
+        "logo_url": logo,
+        "dark_logo_url": logo.replace("_light.svg", "_dark.svg"),
+        "is_playoff": False,
+    }
+
+
 def parse_series(series):
     top = series.get("topSeedTeam")
     ts = top["id"] if top else None
@@ -97,20 +110,39 @@ def seed_season() -> Season:
         return season
 
 
+def seed_all_teams(standings: list) -> None:
+    with Session(engine) as session:
+        existing = {t.abbrev for t in session.exec(select(Team)).all()}
+        new_teams = [
+            Team(**parse_standings_team(s))
+            for s in standings
+            if s["teamAbbrev"]["default"] not in existing
+        ]
+        if new_teams:
+            session.add_all(new_teams)
+            session.commit()
+
+
 def seed_teams(series):
     with Session(engine) as session:
-        teams = {}
+        playoff_teams = {}
         for s in series:
             if not s.get("topSeedTeam") or not s.get("bottomSeedTeam"):
                 continue
-            top_seed = parse_team(s.get("topSeedTeam"))
-            bottom_seed = parse_team(s.get("bottomSeedTeam"))
-            teams[top_seed["api_id"]] = top_seed
-            teams[bottom_seed["api_id"]] = bottom_seed
+            for side in ("topSeedTeam", "bottomSeedTeam"):
+                t = parse_team(s[side])
+                playoff_teams[t["abbrev"]] = t
 
-        for t in teams.values():
-            t_obj = Team(**t)
-            session.add(t_obj)
+        for abbrev, t_data in playoff_teams.items():
+            existing = session.exec(select(Team).where(Team.abbrev == abbrev)).first()
+            if existing:
+                existing.api_id = t_data["api_id"]
+                existing.is_playoff = True
+                existing.logo_url = t_data["logo_url"]
+                existing.dark_logo_url = t_data["dark_logo_url"]
+                session.add(existing)
+            else:
+                session.add(Team(**t_data, is_playoff=True))
         session.commit()
 
 
@@ -199,10 +231,11 @@ def seed_team_badges():
 
 if __name__ == "__main__":
     SQLModel.metadata.create_all(engine)
+    stats = get_team_stats_data(STANDINGS)
+    seed_all_teams(stats)
     series = get_series_data(URL)
     season = seed_season()
     seed_teams(series)
     seed_series(series, season.id)
     seed_scoring_config()
-    stats = get_team_stats_data(STANDINGS)
     seed_standings_data(stats)

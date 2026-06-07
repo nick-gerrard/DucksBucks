@@ -8,6 +8,7 @@ from seed import (
     URL,
     get_team_stats_data,
     seed_season,
+    seed_all_teams,
     seed_teams,
     seed_series,
     seed_scoring_config,
@@ -154,13 +155,14 @@ async def lifespan(app: FastAPI):
     create_db()
     seed_team_badges()
     with Session(engine) as session:
+        stats = get_team_stats_data(STANDINGS)
+        seed_all_teams(stats)
         if not session.exec(select(Series)).first():
             series_data = get_series_data(URL)
             season = seed_season()
             seed_teams(series_data)
             seed_series(series_data, season.id)
             seed_scoring_config()
-            stats = get_team_stats_data(STANDINGS)
             seed_standings_data(stats)
         ingest_games(session, date.today())
     scheduler.add_job(
@@ -420,7 +422,7 @@ async def teams(request: Request, user: User | None = Depends(get_current_user))
     if not user:
         return RedirectResponse("/login")
     with Session(engine) as session:
-        teams = session.exec(select(Team).where(Team.name != "TBD")).all()
+        teams = session.exec(select(Team).where(Team.is_playoff == True)).all()
         stats_map = {s.team_id: s for s in session.exec(select(TeamStats)).all()}
     return templates.TemplateResponse(
         request=request,
@@ -776,7 +778,7 @@ async def profile(request: Request, user: User | None = Depends(get_current_user
     if not user:
         return RedirectResponse("/login")
     with Session(engine) as session:
-        teams = list(session.exec(select(Team).where(Team.name != "TBD")).all())
+        teams = list(session.exec(select(Team)).all())
         recent_txns = fetch_user_transactions(session, user.id)
         badge_url = get_effective_badge_url(session, user)
         active_badge = session.get(Badge, user.badge) if user.badge else None
