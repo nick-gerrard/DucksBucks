@@ -47,6 +47,7 @@ def client(engine, monkeypatch):
     with patch("main.get_series_data", return_value=[]), \
          patch("main.get_team_stats_data", return_value=[]), \
          patch("main.seed_season", return_value=MagicMock(id=1)), \
+         patch("main.seed_all_teams"), \
          patch("main.seed_teams"), \
          patch("main.seed_series"), \
          patch("main.seed_scoring_config"), \
