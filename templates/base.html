@@ -3,29 +3,46 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>{% block title %}Playoff Bracket{% endblock %}</title>
+        <title>
+            {% block title %}Ducksbucks{% endblock %}
+        </title>
         <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/static/icon.svg">
         <link rel="manifest" href="/static/manifest.json">
         <meta name="theme-color" content="#1d4ed8">
         <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="apple-mobile-web-app-status-bar-style"
+              content="black-translucent">
         <meta name="apple-mobile-web-app-title" content="Bracket">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+              rel="stylesheet">
         <link rel="stylesheet" href="/static/css/tailwind.min.css">
         <script src="/static/js/htmx.min.js"></script>
         <script src="/static/js/alpine.min.js" defer></script>
     </head>
     <body class="text-white min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-blue-950">
-        <div class="fixed inset-0 -z-10 overflow-hidden pointer-events-none" aria-hidden="true">
+        <div class="fixed inset-0 -z-10 overflow-hidden pointer-events-none"
+             aria-hidden="true">
             <div class="absolute top-[-10%] left-[-5%] w-[500px] h-[500px] bg-blue-600 rounded-full blur-3xl opacity-[0.15]"></div>
-            <div class="absolute top-[40%] right-[-8%] w-[400px] h-[400px] bg-violet-700 rounded-full blur-3xl opacity-[0.12]"></div>
-            <div class="absolute bottom-[-10%] left-[25%] w-[450px] h-[450px] bg-cyan-800 rounded-full blur-3xl opacity-[0.12]"></div>
+            <div class="absolute top-[40%] right-[-8%] w-[400px] h-[400px] bg-violet-700 rounded-full blur-3xl opacity-[0.12]">
+            </div>
+            <div class="absolute bottom-[-10%] left-[25%] w-[450px] h-[450px] bg-cyan-800 rounded-full blur-3xl opacity-[0.12]">
+            </div>
         </div>
-        {% block navbar %}{% include "partials/navbar.html" %}{% endblock %}
+        {% block navbar %}
+            {% include "partials/navbar.html" %}
+        {% endblock %}
         <main class="p-4 sm:p-6">
+            {% if user %}
+                {% set _badge_url = user_badge_url(user.id) %}
+                <img class="fixed inset-0 w-full h-full object-contain opacity-[0.03] "
+                     src="{{ _badge_url }}" />
+            {% else %}
+                <img class="fixed inset-0 w-full h-full object-contain opacity-[0.03] "
+                     src="static/ducksy.png" />
+            {% endif %}
             {% block content %}{% endblock %}
         </main>
     </body>
