@@ -90,6 +90,13 @@ load_dotenv()
 engine = create_engine("sqlite:///bracket.db")
 templates = Jinja2Templates(directory="templates")
 
+import subprocess as _sp
+try:
+    _git_hash = _sp.check_output(["git", "rev-parse", "--short", "HEAD"], stderr=_sp.DEVNULL).decode().strip()
+except Exception:
+    _git_hash = "0"
+templates.env.globals["cache_bust"] = _git_hash
+
 templates.env.filters["et"] = lambda dt: (
     (dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt)
     .astimezone(ET)
