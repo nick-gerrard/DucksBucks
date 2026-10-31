@@ -413,6 +413,15 @@ def compute_max_possible(
 def _get_or_create_team(session: Session, team_data: dict) -> Team:
     team = session.exec(select(Team).where(Team.api_id == team_data["id"])).first()
     if not team:
+        # Teams seeded from standings have no api_id yet; match on abbrev and backfill it
+        # rather than inserting a duplicate (abbrev is unique).
+        team = session.exec(select(Team).where(Team.abbrev == team_data["abbrev"])).first()
+        if team:
+            team.api_id = team_data["id"]
+            session.add(team)
+            session.commit()
+            session.refresh(team)
+            return team
         light_logo = team_data.get("logo", "")
         team = Team(
             api_id=team_data["id"],
