@@ -1,0 +1,12 @@
+# Deployed by roost (https://github.com/nick-gerrard/roost): deploys after CI passes on main.
+name = "ducksbucks"
+subdomain = "ducksbucks"
+on = "ci-pass"
+
+[backend]                          # backend-only: nginx sends / straight to the app
+workdir = "."
+start = "uvicorn main:app --host 127.0.0.1 --port {port}"
+build = "npm ci && npm run build:css"   # tailwind.min.css is gitignored, built on the server
+migrate = "alembic upgrade head"     # against ~/ducksbucks/bracket.db, same as the old deploy
+health = "/login"
+# Secrets and bracket.db stay in the checkout (~/ducksbucks/.env, loaded by load_dotenv()).
