@@ -390,3 +390,27 @@ class TestFetchTodaysGames:
     def test_past_game_not_bettable(self, session, past_game):
         _, bettable_ids = fetch_todays_games(session)
         assert past_game.id not in bettable_ids
+
+
+class TestGetOrCreateTeam:
+    NHL_CHI = {"id": 16, "name": {"default": "Blackhawks"}, "abbrev": "CHI",
+               "logo": "https://assets.nhle.com/logos/nhl/svg/CHI_light.svg"}
+
+    def test_backfills_api_id_for_team_seeded_without_one(self, session):
+        from models import Team
+        from services import _get_or_create_team
+        seeded = Team(api_id=None, name="Chicago Blackhawks", abbrev="CHI",
+                      logo_url="x", dark_logo_url="y", is_playoff=False)
+        session.add(seeded)
+        session.commit()
+
+        team = _get_or_create_team(session, self.NHL_CHI)
+
+        assert team.id == seeded.id
+        assert team.api_id == 16
+        assert len(session.exec(select(Team).where(Team.abbrev == "CHI")).all()) == 1
+
+    def test_creates_unknown_team(self, session):
+        from services import _get_or_create_team
+        team = _get_or_create_team(session, self.NHL_CHI)
+        assert team.id is not None and team.api_id == 16 and team.abbrev == "CHI"
